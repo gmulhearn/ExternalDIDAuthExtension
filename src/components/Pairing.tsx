@@ -26,21 +26,35 @@ export const Pairing = () => {
   const classes = useStyles();
 
   const [qrVal, setQrVal] = useState<Number | undefined>(undefined);
+  const [connected, setConnected] = useState<Boolean>(false);
 
   const pollNonce = async () => {
+    chrome.runtime.sendMessage({ type: "getNonce" }, ({ connected, nonce }) => {
+      if (connected) {
+        setConnected(true);
+      }
+      if (nonce) {
+        setQrVal(nonce);
+      }
+    });
+
     setTimeout(() => {
-      chrome.runtime.sendMessage({ type: "getNonce" }, (res) => {
-        console.log(res);
-        setQrVal(Number(res));
-      });
+      pollNonce();
     }, 1000);
   };
 
   useEffect(() => {
     pollNonce();
-  });
+  }, []);
 
   const renderQR = () => {
+    if (connected) {
+      return (
+        <div style={{margin: 100}}>
+          <Typography>Connected!</Typography>
+        </div>
+      );
+    }
     if (qrVal) {
       return (
         <div style={{ margin: 20 }}>
@@ -48,7 +62,14 @@ export const Pairing = () => {
         </div>
       );
     } else {
-      <Typography>Loading...</Typography>;
+      return (
+        <div>
+          <Typography>Loading...</Typography>
+          <div>
+            <CircularProgress size={80} />
+          </div>
+        </div>
+      );
     }
   };
 
@@ -60,9 +81,6 @@ export const Pairing = () => {
       flexDirection="column"
     >
       {renderQR()}
-      <div>
-        <CircularProgress size={80} />
-      </div>
     </Box>
   );
 };
