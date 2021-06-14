@@ -1,48 +1,32 @@
-console.log("helloooooo contentjs");
-(() => {
-
-  const credentialsContainer = {
-    async create(opts) {
-
-      const jsonMessage = JSON.stringify(opts);
-      
-      window.dispatchEvent(new CustomEvent("fromInjected", {detail: opts}));
-
-      window.addEventListener("injectData", (data) => {
-        window.webauthnData = data.detail;
-        console.log("injectedjs recieved data from runner");
-      })
-
-      console.log(jsonMessage);
-
-      return new Promise(function (resolve, reject) {
-        setTimeout(() => {
-          console.log("resolving now!")
-          resolve(window.webauthnData);
-        }, 15000);
-      });
-    },
-    async get(opts) {
-      const jsonMessage = JSON.stringify(opts);
-
-      window.dispatchEvent(new CustomEvent("fromInjected", {detail: opts}));
-
-      window.addEventListener("injectData", (data) => {
-        window.webauthnData = data.detail;
-        console.log("injectedjs recieved data from runner");
-      })
-
-      console.log(jsonMessage);
-
-      return new Promise(function (resolve, reject) {
-        setTimeout(() => {
-          console.log("resolving now!!")
-          resolve(window.webauthnData);
-        }, 15000);
-      });
-    },
-  };
+var s = document.createElement("script");
+s.src = chrome.runtime.getURL('webauthnInjection.js');
+s.onload = function() {
+  this.remove();
+};
+(document.head || document.documentElement).appendChild(s);
 
 
-  Object.assign(navigator.credentials, credentialsContainer);
-})();
+var webauthnData = null;
+
+window.addEventListener("fromInjected", (data) => {
+  console.log(data.detail)
+
+  webauthnData = data.detail;
+}, false)
+
+chrome.runtime.onMessage.addListener(
+  (message, sender, sendResponse) => {
+    switch(message.type) {
+      case "getWebAuthn":
+        sendResponse(webauthnData);
+        break;
+      case "injectData":
+        console.log(message.data);
+        window.dispatchEvent(new CustomEvent("injectData", {detail: message.data}));
+        break;
+      default:
+        console.log("unrecog message")
+    }
+  }
+)
+
