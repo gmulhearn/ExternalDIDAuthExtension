@@ -1,10 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {
-  Box,
-    CircularProgress,
-  Grid,
-  Typography,
-} from "@material-ui/core";
+import { Box, CircularProgress, Grid, Typography } from "@material-ui/core";
 import { makeStyles } from "@material-ui/core/styles";
 import QRCode from "qrcode.react";
 
@@ -30,11 +25,14 @@ declare global {
 export const Pairing = () => {
   const classes = useStyles();
 
-  const [qrVal, setQrVal] = useState<Number>(69);
+  const [qrVal, setQrVal] = useState<Number | undefined>(undefined);
 
   const pollNonce = async () => {
     setTimeout(() => {
-      
+      chrome.runtime.sendMessage({ type: "getNonce" }, (res) => {
+        console.log(res);
+        setQrVal(Number(res));
+      });
     }, 1000);
   };
 
@@ -42,16 +40,29 @@ export const Pairing = () => {
     pollNonce();
   });
 
+  const renderQR = () => {
+    if (qrVal) {
+      return (
+        <div style={{ margin: 20 }}>
+          <QRCode value={qrVal.toString()} size={350} />
+        </div>
+      );
+    } else {
+      <Typography>Loading...</Typography>;
+    }
+  };
+
   return (
-    <Box display="flex" className={classes.root} alignItems="center" flexDirection="column">
-      
-          <div style={{margin: 20}} >
-            <QRCode value={qrVal.toString()} size={350} />
-          </div>
-          <div>
-              <CircularProgress size={80}/>
-          </div>
-        
+    <Box
+      display="flex"
+      className={classes.root}
+      alignItems="center"
+      flexDirection="column"
+    >
+      {renderQR()}
+      <div>
+        <CircularProgress size={80} />
+      </div>
     </Box>
   );
 };

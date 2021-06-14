@@ -22,8 +22,14 @@
       "js": ["content.js"]
     }
   ],
+  "background": {
+    "scripts": ["webRTCController.js"],
+    "persistent": true
+  },
   "web_accessible_resources": [
-    "webauthnInjection.js"
+    "webauthnInjection.js",
+    "minifiedLibs/simplepeer.js",
+    "minifiedLibs/axios.js"
   ],
   "permissions": [
     "tabs",
