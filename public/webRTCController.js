@@ -92,20 +92,41 @@ const controller = () => {
 
   // set up extension comms event handlers
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  
     switch (message.type) {
       case "getNonce":
-        sendResponse({connected: connected, nonce: nonce});        
+        sendResponse({ connected: connected, nonce: nonce });
         break;
       case WEBAUTHN_REG_REQUEST:
-        // todo
+        if (connected) {
+          chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
+            origin = tabs[0].url;  // i think this might not be correct always
+
+            var packagedData = {
+              type: WEBAUTHN_REG_REQUEST,
+              jsonData: JSON.stringify({
+                origin: origin,
+                publicKeyCredentialCreationOptions: message.data,
+              }),
+            };
+            serverPeer.send(JSON.stringify(packagedData));
+          });
+        }
         break;
       case WEBAUTHN_AUTH_REQUEST:
         if (connected) {
-          var packagedData = {
-            type: WEBAUTHN_AUTH_REQUEST,
-            jsonData: JSON.stringify(message.data),
-          };
-          serverPeer.send(JSON.stringify(packagedData));
+          chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
+            origin = tabs[0].url;
+
+            var packagedData = {
+              type: WEBAUTHN_AUTH_REQUEST,
+              jsonData: JSON.stringify({
+                origin: origin,
+                publicKeyCredentialRequestOptions: message.data,
+              }),
+            };
+            serverPeer.send(JSON.stringify(packagedData));
+          });
         }
         break;
       default:
