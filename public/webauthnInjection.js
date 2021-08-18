@@ -1,4 +1,11 @@
 (() => {
+  console.log("begin injection")
+  
+  const nativeCredentials = {
+    create: navigator.credentials.create,
+    get: navigator.credentials.get,
+};
+
   /** data type = [PublicKeyCredentialCreationOptions] */
   const WEBAUTHN_REG_REQUEST = "WEBAUTHN_REG_REQUEST";
 
@@ -15,6 +22,12 @@
   const pollAndResolveForData = (attempts, resolve, reject) => {
     setTimeout(() => {
       if (window.webauthnResolution != null) {
+        console.log("got data, now resolving:");
+        console.log(window.webauthnResolution);
+
+         var enc = new TextDecoder("utf-8")
+
+        console.log(enc.decode(new Uint8Array(window.webauthnResolution.response.clientDataJSON)))
         resolve(window.webauthnResolution);
       } else {
         if (attempts > 15) {
@@ -27,11 +40,19 @@
   };
 
   const credentialsContainer = {
-    async create(opts) {
+
+
+    create(opts) {
       const jsonMessage = JSON.stringify(opts);
+            
+      console.log(jsonMessage);
+
+      // return nativeCredentials.create.bind(navigator.credentials)(opts);
+
+      const data = {origin: window.origin, data: opts}
 
       window.dispatchEvent(
-        new CustomEvent(WEBAUTHN_REG_REQUEST, { detail: opts })
+        new CustomEvent(WEBAUTHN_REG_REQUEST, { detail: data })
       );
 
       window.addEventListener(WEBAUTHN_REG_RESPONSE, (data) => {
@@ -39,21 +60,19 @@
         console.log("injectedjs recieved data from runner");
       });
 
-      console.log(jsonMessage);
 
       return new Promise(function (resolve, reject) {
         pollAndResolveForData(0, resolve, reject);
-        // setTimeout(() => {
-        //   console.log("resolving now!");
-        //   resolve(window.webauthnResolution);
-        // }, 15000);
       });
     },
-    async get(opts) {
+    get(opts) {
       const jsonMessage = JSON.stringify(opts);
 
+      const data = {origin: window.origin, data: opts}
+
+
       window.dispatchEvent(
-        new CustomEvent(WEBAUTHN_AUTH_REQUEST, { detail: opts })
+        new CustomEvent(WEBAUTHN_AUTH_REQUEST, { detail: data })
       );
 
       window.addEventListener(WEBAUTHN_AUTH_RESPONSE, (data) => {
@@ -64,13 +83,10 @@
 
       return new Promise(function (resolve, reject) {
         pollAndResolveForData(0, resolve, reject);
-        // setTimeout(() => {
-        //   console.log("resolving now!!");
-        //   resolve(window.webauthnResolution);
-        // }, 15000);
       });
     },
   };
 
   Object.assign(navigator.credentials, credentialsContainer);
+  console.log("nav creds injected")
 })();

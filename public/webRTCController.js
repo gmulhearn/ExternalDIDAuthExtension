@@ -100,13 +100,12 @@ const controller = () => {
       case WEBAUTHN_REG_REQUEST:
         if (connected) {
           chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
-            origin = tabs[0].url;  // i think this might not be correct always
 
             var packagedData = {
               type: WEBAUTHN_REG_REQUEST,
               jsonData: JSON.stringify({
-                origin: origin,
-                publicKeyCredentialCreationOptions: message.data,
+                origin: message.data.origin,
+                publicKeyCredentialCreationOptions: message.data.data,
               }),
             };
             serverPeer.send(JSON.stringify(packagedData));
@@ -116,13 +115,13 @@ const controller = () => {
       case WEBAUTHN_AUTH_REQUEST:
         if (connected) {
           chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
-            origin = tabs[0].url;
+            //origin = tabs[0].url;
 
             var packagedData = {
               type: WEBAUTHN_AUTH_REQUEST,
               jsonData: JSON.stringify({
-                origin: origin,
-                publicKeyCredentialRequestOptions: message.data,
+                origin: message.data.origin,
+                publicKeyCredentialRequestOptions: message.data.data,
               }),
             };
             serverPeer.send(JSON.stringify(packagedData));
