@@ -1,10 +1,19 @@
 (() => {
-  console.log("begin injection")
-  
+  console.log("begin injection");
+
   const nativeCredentials = {
     create: navigator.credentials.create,
     get: navigator.credentials.get,
-};
+  };
+
+  const authenticatorExtensionsAppIDExcludeOutputTrue = () => {
+    
+    let result = {
+      appidExclude: true,
+    }
+    
+    return result;
+  };
 
   /** data type = [PublicKeyCredentialCreationOptions] */
   const WEBAUTHN_REG_REQUEST = "WEBAUTHN_REG_REQUEST";
@@ -18,6 +27,9 @@
   /** data type = [PublicKeyCredentialAssertionResponse] */
   const WEBAUTHN_AUTH_RESPONSE = "WEBAUTHN_AUTH_RESPONSE";
 
+  /** data type = useNative: Boolean */
+  const TOGGLE_NATIVE_CREDENTIALS = "TOGGLE_NATIVE_CREDENTIALS";
+
   //
   const pollAndResolveForData = (attempts, resolve, reject) => {
     setTimeout(() => {
@@ -25,9 +37,13 @@
         console.log("got data, now resolving:");
         console.log(window.webauthnResolution);
 
-         var enc = new TextDecoder("utf-8")
+        var enc = new TextDecoder("utf-8");
 
-        console.log(enc.decode(new Uint8Array(window.webauthnResolution.response.clientDataJSON)))
+        console.log(
+          enc.decode(
+            new Uint8Array(window.webauthnResolution.response.clientDataJSON)
+          )
+        );
         resolve(window.webauthnResolution);
       } else {
         if (attempts > 15) {
@@ -40,16 +56,16 @@
   };
 
   const credentialsContainer = {
-
-
     create(opts) {
+      window.webauthnResolution = null;
+
       const jsonMessage = JSON.stringify(opts);
-            
+
       console.log(jsonMessage);
 
       // return nativeCredentials.create.bind(navigator.credentials)(opts);
 
-      const data = {origin: window.origin, data: opts}
+      const data = { origin: window.origin, data: opts };
 
       window.dispatchEvent(
         new CustomEvent(WEBAUTHN_REG_REQUEST, { detail: data })
@@ -60,16 +76,24 @@
         console.log("injectedjs recieved data from runner");
       });
 
-
       return new Promise(function (resolve, reject) {
-        pollAndResolveForData(0, resolve, reject);
+        pollAndResolveForData(
+          0,
+          (resolvedData) => {
+            resolvedData.getClientExtensionResults =
+              authenticatorExtensionsAppIDExcludeOutputTrue;
+            resolve(resolvedData);
+          },
+          reject
+        );
       });
     },
     get(opts) {
+      window.webauthnResolution = null;
+
       const jsonMessage = JSON.stringify(opts);
 
-      const data = {origin: window.origin, data: opts}
-
+      const data = { origin: window.origin, data: opts };
 
       window.dispatchEvent(
         new CustomEvent(WEBAUTHN_AUTH_REQUEST, { detail: data })
@@ -87,6 +111,14 @@
     },
   };
 
+  window.addEventListener(TOGGLE_NATIVE_CREDENTIALS, (data) => {
+    if (data.detail.useNative === true) {
+      Object.assign(navigator.credentials, nativeCredentials);
+    } else if (data.detail.useNative === false) {
+      Object.assign(navigator.credentials, credentialsContainer);
+    }
+  })
+
   Object.assign(navigator.credentials, credentialsContainer);
-  console.log("nav creds injected")
+  console.log("nav creds injected");
 })();

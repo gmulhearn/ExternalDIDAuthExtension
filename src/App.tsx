@@ -8,8 +8,9 @@ import {
   Button,
   makeStyles,
   Toolbar,
-  Typography,
+  Typography
 } from "@material-ui/core";
+import {Switch as MaterialSwitch} from "@material-ui/core";
 import { Route, Switch } from "react-router-dom";
 
 const useStyles = makeStyles((theme) => ({
@@ -28,7 +29,14 @@ const useStyles = makeStyles((theme) => ({
 const App = () => {
   const classes = useStyles();
 
-  const [connected, setConnected] = useState<Boolean>(false);
+  const [connected, setConnected] = useState<boolean>(false);
+  const [enabled, setEnabled] = useState<boolean>(false);
+
+  try {
+    chrome.runtime.sendMessage({ type: "getEnabled"}, ({enabled}) => {
+      setEnabled(enabled);
+    })
+  } catch (e) {}
 
   try {
     chrome.runtime.sendMessage({ type: "getNonce" }, ({ connected }) => {
@@ -55,7 +63,8 @@ const App = () => {
   };
 
   const renderMain = () => {
-    if (connected) {
+    if (enabled) {
+      if (connected) {
       return (
         <Switch>
           <Route exact path="/">
@@ -68,14 +77,39 @@ const App = () => {
         <Pairing />
       )
     }
+    } else {
+      return (
+        <div>
+          Disconnected!
+        </div>
+      )
+    }
+    
   };
+
+  const onSwitchClick = () => {
+    if (enabled) {
+      chrome.runtime.sendMessage({type: "disabledWebRTC"}, () => {});
+      setEnabled(false);
+    } else {
+      // enabling...
+      chrome.runtime.sendMessage({type: "enabledWebRTC"}, () => {});
+      setEnabled(true);
+    }
+  }
 
   return (
     <Box className={classes.root}>
       <AppBar position="sticky" color="inherit">
         <Toolbar>
 
-          <Box className={classes.menu}>{renderConnectButton()}</Box>
+          <Box className={classes.menu}>
+            {renderConnectButton()}
+            <MaterialSwitch 
+              checked={enabled}
+              onChange={onSwitchClick}
+            />
+            </Box>
         </Toolbar>
       </AppBar>
       {renderMain()}
