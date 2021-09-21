@@ -58,19 +58,37 @@
     create(opts) {
       window.webauthnResolution = null;
 
+      console.log(opts);
+
+      // convert challenge to Uint8Array if it's not already - for stringifying
+      opts.publicKey.challenge = new Uint8Array(opts.publicKey.challenge);
+
       const jsonMessage = JSON.stringify(opts);
 
       console.log(jsonMessage);
 
-      const data = { origin: window.origin, data: opts };
+      // occasionally ref is nulled out causing issues, cloning solves this
+      const optsClone = JSON.parse(JSON.stringify(opts));
+
+      const data = { origin: window.origin, data: optsClone };
 
       window.dispatchEvent(
         new CustomEvent(WEBAUTHN_REG_REQUEST, { detail: data })
       );
 
       window.addEventListener(WEBAUTHN_REG_RESPONSE, (data) => {
-        window.webauthnResolution = data.detail;
-        console.log("injectedjs recieved data from runner");
+        let regResponse = data.detail;
+
+        // Convert to Uint8Arrays (ArrayBuffer type) - some require this
+        regResponse.rawId = new Uint8Array(regResponse.rawId);
+        regResponse.response.attestationObject = new Uint8Array(
+          regResponse.response.attestationObject
+        );
+        regResponse.response.clientDataJSON = new Uint8Array(
+          regResponse.response.clientDataJSON
+        );
+
+        window.webauthnResolution = regResponse;
       });
 
       return new Promise(function (resolve, reject) {
@@ -88,16 +106,46 @@
     get(opts) {
       window.webauthnResolution = null;
 
+      console.log(opts);
+
       const jsonMessage = JSON.stringify(opts);
 
-      const data = { origin: window.origin, data: opts };
+      // convert challenge to Uint8Array if it's not already - for stringifying
+      opts.publicKey.challenge = new Uint8Array(opts.publicKey.challenge);
+      opts.publicKey.allowCredentials = opts.publicKey.allowCredentials.map(
+        (cred) => {
+          return { type: cred.type, id: new Uint8Array(cred.id) };
+        }
+      );
+
+      // occasionally ref is nulled out causing issues, cloning solves this
+      const optsClone = JSON.parse(JSON.stringify(opts));
+
+      const data = { origin: window.origin, data: optsClone };
 
       window.dispatchEvent(
         new CustomEvent(WEBAUTHN_AUTH_REQUEST, { detail: data })
       );
 
       window.addEventListener(WEBAUTHN_AUTH_RESPONSE, (data) => {
-        window.webauthnResolution = data.detail;
+        let regResponse = data.detail;
+
+        // Convert to Uint8Arrays (ArrayBuffer type) - some require this
+        regResponse.rawId = new Uint8Array(regResponse.rawId);
+        regResponse.response.authenticatorData = new Uint8Array(
+          regResponse.response.authenticatorData
+        );
+        regResponse.response.clientDataJSON = new Uint8Array(
+          regResponse.response.clientDataJSON
+        );
+        regResponse.response.signature = new Uint8Array(
+          regResponse.response.signature
+        );
+        regResponse.response.userHandle = new Uint8Array(
+          regResponse.response.userHandle
+        );
+
+        window.webauthnResolution = regResponse;
       });
 
       console.log(jsonMessage);
@@ -114,7 +162,19 @@
       console.log("debugging create credential...");
       console.log(opts);
 
-      return nativeCredentials.create.bind(navigator.credentials)(opts);
+      // force cred type optionally:
+      // opts.publicKey.pubKeyCredParams = [{type: "public-key", alg: -7}]
+
+      return new Promise(async (resolve, reject) => {
+        let res = await nativeCredentials.create.bind(navigator.credentials)(
+          opts
+        );
+        console.log("got native result:");
+        console.log(res);
+        resolve(res);
+      });
+
+      //return nativeCredentials.create.bind(navigator.credentials)(opts);
     },
     get(opts) {
       console.log("debugging get credential...");
