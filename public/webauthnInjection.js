@@ -7,11 +7,10 @@
   };
 
   const authenticatorExtensionsAppIDExcludeOutputTrue = () => {
-    
     let result = {
       appidExclude: true,
-    }
-    
+    };
+
     return result;
   };
 
@@ -55,15 +54,13 @@
     }, 500);
   };
 
-  const credentialsContainer = {
+  const customCredentialsContainer = {
     create(opts) {
       window.webauthnResolution = null;
 
       const jsonMessage = JSON.stringify(opts);
 
       console.log(jsonMessage);
-
-      // return nativeCredentials.create.bind(navigator.credentials)(opts);
 
       const data = { origin: window.origin, data: opts };
 
@@ -111,14 +108,30 @@
     },
   };
 
+  // WRAPPER OVER NATIVE CREDENTIALS USED FOR DEBUGGING
+  const nativeCredentialsContainer = {
+    create(opts) {
+      console.log("debugging create credential...");
+      console.log(opts);
+
+      return nativeCredentials.create.bind(navigator.credentials)(opts);
+    },
+    get(opts) {
+      console.log("debugging get credential...");
+      console.log(opts);
+
+      return nativeCredentials.get.bind(navigator.credentials)(opts);
+    },
+  };
+
   window.addEventListener(TOGGLE_NATIVE_CREDENTIALS, (data) => {
     if (data.detail.useNative === true) {
-      Object.assign(navigator.credentials, nativeCredentials);
+      Object.assign(navigator.credentials, nativeCredentialsContainer);
     } else if (data.detail.useNative === false) {
-      Object.assign(navigator.credentials, credentialsContainer);
+      Object.assign(navigator.credentials, customCredentialsContainer);
     }
-  })
+  });
 
-  Object.assign(navigator.credentials, credentialsContainer);
+  Object.assign(navigator.credentials, customCredentialsContainer);
   console.log("nav creds injected");
 })();
