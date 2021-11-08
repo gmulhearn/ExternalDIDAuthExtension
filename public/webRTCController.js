@@ -17,8 +17,8 @@ const WEBAUTHN_AUTH_REQUEST = "WEBAUTHN_AUTH_REQUEST";
 /** data type = [PublicKeyCredentialAssertionResponse] */
 const WEBAUTHN_AUTH_RESPONSE = "WEBAUTHN_AUTH_RESPONSE";
 
-  /** data type = useNative: Boolean */
-  const TOGGLE_NATIVE_CREDENTIALS = "TOGGLE_NATIVE_CREDENTIALS";
+/** data type = useNative: Boolean */
+const TOGGLE_NATIVE_CREDENTIALS = "TOGGLE_NATIVE_CREDENTIALS";
 
 const genNonce = () => {
   //return 69;
@@ -120,7 +120,7 @@ const controller = () => {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
           chrome.tabs.sendMessage(tabs[0].id, {
             type: TOGGLE_NATIVE_CREDENTIALS,
-            data: {useNative: true}
+            data: { useNative: true },
           });
         });
         break;
@@ -131,44 +131,32 @@ const controller = () => {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
           chrome.tabs.sendMessage(tabs[0].id, {
             type: TOGGLE_NATIVE_CREDENTIALS,
-            data: {useNative: false}
+            data: { useNative: false },
           });
         });
         break;
       case WEBAUTHN_REG_REQUEST:
         if (connected) {
-          chrome.tabs.query(
-            { active: true, lastFocusedWindow: true },
-            (tabs) => {
-              var packagedData = {
-                type: WEBAUTHN_REG_REQUEST,
-                jsonData: JSON.stringify({
-                  origin: message.data.origin,
-                  publicKeyCredentialCreationOptions: message.data.data,
-                }),
-              };
-              serverPeer.send(JSON.stringify(packagedData));
-            }
-          );
+          var packagedData = {
+            type: WEBAUTHN_REG_REQUEST,
+            jsonData: JSON.stringify({
+              origin: message.data.origin,
+              publicKeyCredentialCreationOptions: message.data.data,
+            }),
+          };
+          serverPeer.send(JSON.stringify(packagedData));
         }
         break;
       case WEBAUTHN_AUTH_REQUEST:
         if (connected) {
-          chrome.tabs.query(
-            { active: true, lastFocusedWindow: true },
-            (tabs) => {
-              //origin = tabs[0].url;
-
-              var packagedData = {
-                type: WEBAUTHN_AUTH_REQUEST,
-                jsonData: JSON.stringify({
-                  origin: message.data.origin,
-                  publicKeyCredentialRequestOptions: message.data.data,
-                }),
-              };
-              serverPeer.send(JSON.stringify(packagedData));
-            }
-          );
+          var packagedData = {
+            type: WEBAUTHN_AUTH_REQUEST,
+            jsonData: JSON.stringify({
+              origin: message.data.origin,
+              publicKeyCredentialRequestOptions: message.data.data,
+            }),
+          };
+          serverPeer.send(JSON.stringify(packagedData));
         }
         break;
       default:

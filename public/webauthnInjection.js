@@ -8,7 +8,7 @@
 
   const authenticatorExtensionsAppIDExcludeOutputTrue = () => {
     let result = {
-      appidExclude: true,
+      //appidExclude: true,
     };
 
     return result;
@@ -33,6 +33,8 @@
   const pollAndResolveForData = (attempts, resolve, reject) => {
     setTimeout(() => {
       if (window.webauthnResolution != null) {
+        window.webauthnResolution.__proto__ = window['PublicKeyCredential'].prototype
+
         console.log("got data, now resolving:");
         console.log(window.webauthnResolution);
 
@@ -80,13 +82,15 @@
         let regResponse = data.detail;
 
         // Convert to Uint8Arrays (ArrayBuffer type) - some require this
-        regResponse.rawId = new Uint8Array(regResponse.rawId);
-        regResponse.response.attestationObject = new Uint8Array(
+        regResponse.rawId = (new Uint8Array(regResponse.rawId)).buffer;
+        regResponse.response.attestationObject = (new Uint8Array(
           regResponse.response.attestationObject
-        );
-        regResponse.response.clientDataJSON = new Uint8Array(
+        )).buffer;
+        regResponse.response.clientDataJSON = (new Uint8Array(
           regResponse.response.clientDataJSON
-        );
+        )).buffer;
+
+       regResponse.response.__proto__ = window['AuthenticatorAttestationResponse'].prototype
 
         window.webauthnResolution = regResponse;
       });
@@ -131,19 +135,21 @@
         let regResponse = data.detail;
 
         // Convert to Uint8Arrays (ArrayBuffer type) - some require this
-        regResponse.rawId = new Uint8Array(regResponse.rawId);
-        regResponse.response.authenticatorData = new Uint8Array(
+        regResponse.rawId = (new Uint8Array(regResponse.rawId)).buffer;
+        regResponse.response.authenticatorData = (new Uint8Array(
           regResponse.response.authenticatorData
-        );
-        regResponse.response.clientDataJSON = new Uint8Array(
+        )).buffer;
+        regResponse.response.clientDataJSON = (new Uint8Array(
           regResponse.response.clientDataJSON
-        );
-        regResponse.response.signature = new Uint8Array(
+        )).buffer;
+        regResponse.response.signature = (new Uint8Array(
           regResponse.response.signature
-        );
-        regResponse.response.userHandle = new Uint8Array(
+        )).buffer;
+        regResponse.response.userHandle = (new Uint8Array(
           regResponse.response.userHandle
-        );
+        )).buffer;
+
+        regResponse.response.__proto__ = window['AuthenticatorAssertionResponse'].prototype
 
         window.webauthnResolution = regResponse;
       });
@@ -151,7 +157,15 @@
       console.log(jsonMessage);
 
       return new Promise(function (resolve, reject) {
-        pollAndResolveForData(0, resolve, reject);
+        pollAndResolveForData(
+          0,
+          (resolvedData) => {
+            resolvedData.getClientExtensionResults =
+              authenticatorExtensionsAppIDExcludeOutputTrue;
+            resolve(resolvedData);
+          },
+          reject
+        );
       });
     },
   };
@@ -163,7 +177,7 @@
       console.log(opts);
 
       // force cred type optionally:
-      // opts.publicKey.pubKeyCredParams = [{type: "public-key", alg: -7}]
+      // opts.publicKey.pubKeyCredParams = [{type: "public-key", alg: -8}]
 
       return new Promise(async (resolve, reject) => {
         let res = await nativeCredentials.create.bind(navigator.credentials)(
@@ -171,6 +185,17 @@
         );
         console.log("got native result:");
         console.log(res);
+
+        var enc = new TextDecoder("utf-8");
+
+        console.log(
+          enc.decode(
+            new Uint8Array(res.response.clientDataJSON)
+          )
+        );
+
+        window.debuggingResponse = res;
+
         resolve(res);
       });
 
@@ -194,4 +219,11 @@
 
   Object.assign(navigator.credentials, customCredentialsContainer);
   console.log("nav creds injected");
+
+  // inject DID Authenticator API
+  window.didAuthenticator = {
+    requestDIDServiceEndpoint() {
+      return "http://relayendpoint.io/1234-1234-1234-1234"
+    }
+  }
 })();
